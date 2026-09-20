@@ -55,3 +55,5 @@ jobs:
 # APK build pipeline active
 
 # rebuild after Gradle fix
+
+# rebuild without AndroidX dependency conflicts
