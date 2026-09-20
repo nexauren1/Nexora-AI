@@ -6,6 +6,8 @@
     <application
         android:allowBackup="true"
         android:label="Nexora AI"
+        android:icon="@drawable/ic_nexora"
+        android:roundIcon="@drawable/ic_nexora"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
         <activity
