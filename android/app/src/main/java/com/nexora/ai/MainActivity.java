@@ -121,7 +121,6 @@ public class MainActivity extends Activity {
         restoreHistory();
         updateHistoryPage();
         loadUsage();
-        requestPermissionsIfNeeded();
     }
 
     private void bindViews() {
@@ -1078,7 +1077,12 @@ public class MainActivity extends Activity {
                 Manifest.permission.CAMERA
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            showError("Permite o acesso à câmara.");
+            requestPermissions(
+                new String[] {
+                    Manifest.permission.CAMERA
+                },
+                41
+            );
             return;
         }
 
@@ -1363,6 +1367,21 @@ public class MainActivity extends Activity {
     }
 
     private void startVoiceInput() {
+        if (
+            android.os.Build.VERSION.SDK_INT >= 23 &&
+            checkSelfPermission(
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                new String[] {
+                    Manifest.permission.RECORD_AUDIO
+                },
+                42
+            );
+            return;
+        }
+
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             showError(
                 "O ditado não está disponível neste telefone."
@@ -1567,17 +1586,32 @@ public class MainActivity extends Activity {
         return value;
     }
 
-    private void requestPermissionsIfNeeded() {
+    @Override
+    public void onRequestPermissionsResult(
+        int requestCode,
+        String[] permissions,
+        int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        );
+
         if (
-            android.os.Build.VERSION.SDK_INT >= 23
+            grantResults.length == 0 ||
+            grantResults[0] != PackageManager.PERMISSION_GRANTED
         ) {
-            requestPermissions(
-                new String[] {
-                    Manifest.permission.CAMERA,
-                    Manifest.permission.RECORD_AUDIO
-                },
-                40
+            showError(
+                "A permissão foi recusada."
             );
+            return;
+        }
+
+        if (requestCode == 41) {
+            openCamera();
+        } else if (requestCode == 42) {
+            startVoiceInput();
         }
     }
 
