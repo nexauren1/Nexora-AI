@@ -56,7 +56,8 @@ const MODE_NAMES = {
   summary: "Resumos",
   pdf: "PDF",
   documents: "Documentos",
-  image: "Imagens",
+  image: "Analisar imagens",
+  "image-gen": "Gerar imagem",
   audio: "Áudio",
   video: "Vídeo",
   code: "Código",
@@ -452,9 +453,12 @@ function setMode(
 
   els.input.placeholder =
     state.mode ===
-      "image"
+      "image-gen"
       ? "Descreve a imagem que queres gerar…"
-      : "Mensagem para Nexora AI";
+      : state.mode ===
+        "image"
+        ? "Adiciona uma imagem e faz uma pergunta…"
+        : "Mensagem para Nexora AI";
 
   updateModeUi();
   closeSidebarMobile();
@@ -1374,7 +1378,7 @@ async function sendMessage(
 
   if (
     state.mode ===
-    "image"
+    "image-gen"
   ) {
     await sendImageRequest(
       text,
@@ -3066,7 +3070,7 @@ function bindEvents() {
         "generate-image"
       ) {
         setMode(
-          "image"
+          "image-gen"
         );
       }
 
