@@ -580,6 +580,29 @@ function collectImage(data) {
   return null;
 }
 
+function base64ToBytes(value) {
+  const binary =
+    atob(
+      String(value || "")
+    );
+
+  const bytes =
+    new Uint8Array(
+      binary.length
+    );
+
+  for (
+    let i = 0;
+    i < binary.length;
+    i++
+  ) {
+    bytes[i] =
+      binary.charCodeAt(i);
+  }
+
+  return bytes;
+}
+
 function bytesToBase64(bytes) {
   let binary = "";
   const chunk = 0x8000;
@@ -864,6 +887,32 @@ async function handleChat(
     } else {
       body =
         await request.json();
+
+      if (
+        body &&
+        body.fileBytes &&
+        body.fileName
+      ) {
+        const bytes =
+          base64ToBytes(
+            String(body.fileBytes)
+          );
+
+        file =
+          new File(
+            [bytes],
+            String(
+              body.fileName
+            ).slice(0, 255),
+            {
+              type:
+                String(
+                  body.mimeType ||
+                  "application/octet-stream"
+                )
+            }
+          );
+      }
     }
   } catch {
     return textError(
