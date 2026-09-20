@@ -1022,7 +1022,7 @@ async function handleLiveToken(request, env) {
     return json(
       {
         ok: true,
-        token: data.token,
+        token: data.name || (data.authToken && data.authToken.name),
         model:
           "gemini-3.8-live",
         remaining:
