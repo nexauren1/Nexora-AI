@@ -8,17 +8,14 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
 
 public class MainActivity extends Activity {
     private WebView webView;
 
     @Override
-    protected void onCreate(@Nullable Bundle state) {
+    protected void onCreate(Bundle state) {
         super.onCreate(state);
-        ActivityCompat.requestPermissions(
-            this,
+        requestPermissions(
             new String[] {
                 Manifest.permission.CAMERA,
                 Manifest.permission.RECORD_AUDIO
