@@ -584,7 +584,7 @@ public class MainActivity extends Activity {
             message.user ? "Tu" : "N"
         );
         avatar.setTextSize(10);
-        avatar.setTextStyle(android.graphics.Typeface.BOLD);
+        avatar.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
         avatar.setTextColor(
             message.user
                 ? getResources().getColor(R.color.nexora_primary)
@@ -820,7 +820,8 @@ public class MainActivity extends Activity {
                 )
             );
             who.setTextSize(11);
-            who.setTextStyle(
+            who.setTypeface(
+                android.graphics.Typeface.DEFAULT,
                 android.graphics.Typeface.BOLD
             );
 
