@@ -14,23 +14,12 @@ android {
         versionName = "0.3.0"
     }
 
-    signingConfigs {
-        create("release") {
-            storeFile =
-                file(
-                    System.getProperty("user.home") +
-                    "/.android/debug.keystore"
-                )
-            storePassword = "android"
-            keyAlias = "AndroidDebugKey"
-            keyPassword = "android"
-        }
-    }
-
     buildTypes {
         getByName("release") {
             signingConfig =
-                signingConfigs.getByName("release")
+                signingConfigs.getByName(
+                    "debug"
+                )
             isMinifyEnabled = false
             isShrinkResources = false
         }
