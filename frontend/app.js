@@ -166,12 +166,16 @@ function apiHeaders() {
 
 function apiFetch(path, options) {
   const opts = options || {};
+  const apiBase = window.NEXORA_API_BASE || "";
+  const target = apiBase && /^\//.test(path)
+    ? apiBase.replace(/\/$/, "") + path
+    : path;
   opts.headers = Object.assign(
     {},
     opts.headers || {},
     apiHeaders()
   );
-  return fetch(path, opts);
+  return fetch(target, opts);
 }
 
 function showToast(message) {
