@@ -4,6 +4,10 @@ plugins {
 android {
     namespace = "com.nexora.ai"
     compileSdk = 35
+
+    buildFeatures {
+        buildConfig = true
+    }
     defaultConfig {
         applicationId = "com.nexora.ai"
         minSdk = 23
