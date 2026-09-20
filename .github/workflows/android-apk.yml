@@ -1,11 +1,10 @@
-name: Android APK
+name: Nexora AI Android Release
 
 on:
   push:
     branches: ["main"]
     paths:
       - "android/**"
-      - "frontend/**"
       - ".github/workflows/android-apk.yml"
   workflow_dispatch:
 
@@ -13,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  build-apk:
+  build-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,33 +27,34 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Copy web app into Android assets
-        run: |
-          rm -rf android/app/src/main/assets/frontend
-          mkdir -p android/app/src/main/assets
-          cp -R frontend android/app/src/main/assets/frontend
-
-      - name: Build APK
+      - name: Build native Android release APK
         working-directory: android
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleRelease
 
-      - name: Verify APK exists
-        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify APK
+        run: |
+          test -s android/app/build/outputs/apk/release/app-release.apk
+          file android/app/build/outputs/apk/release/app-release.apk
+          unzip -t android/app/build/outputs/apk/release/app-release.apk >/dev/null
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nexora-ai-android-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: nexora-ai-native-release
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create APK release
+      - name: Publish GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="android-v0.2.${GITHUB_RUN_NUMBER}"
-          gh release create "${VERSION}" \
-            "android/app/build/outputs/apk/debug/app-debug.apk" \
-            --title "Nexora AI ${VERSION} — Android APK" \
-            --notes "Debug APK built from commit ${GITHUB_SHA}."
+          VERSION="android-v0.3.\${GITHUB_RUN_NUMBER}"
+          cp \
+            android/app/build/outputs/apk/release/app-release.apk \
+            "Nexora-AI-\${VERSION}.apk"
+
+          gh release create "\${VERSION}" \
+            "Nexora-AI-\${VERSION}.apk" \
+            --title "Nexora AI \${VERSION} — Native Android" \
+            --notes "Real native Android application. No WebView. Built from commit \${GITHUB_SHA}."
