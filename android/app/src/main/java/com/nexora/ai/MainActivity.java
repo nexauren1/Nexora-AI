@@ -110,7 +110,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
 
-        api = new NativeApi(getDeviceId());
+        api = new NativeApi(getNexoraDeviceId());
 
         setContentView(R.layout.activity_main);
 
@@ -632,7 +632,7 @@ public class MainActivity extends Activity {
 
             Button copy = new Button(this);
             copy.setText("Copiar");
-            copy.setTextAllCaps(false);
+            copy.setAllCaps(false);
             copy.setTextSize(10);
             copy.setMinWidth(0);
             copy.setMinHeight(0);
@@ -658,7 +658,7 @@ public class MainActivity extends Activity {
 
             Button listen = new Button(this);
             listen.setText("Ouvir");
-            listen.setTextAllCaps(false);
+            listen.setAllCaps(false);
             listen.setTextSize(10);
             listen.setMinWidth(0);
             listen.setMinHeight(0);
@@ -1559,7 +1559,7 @@ public class MainActivity extends Activity {
             .show();
     }
 
-    private String getDeviceId() {
+    private String getNexoraDeviceId() {
         SharedPreferences prefs =
             getSharedPreferences(
                 "nexora_native",
