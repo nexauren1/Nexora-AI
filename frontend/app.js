@@ -1082,7 +1082,7 @@ async function startLiveVoice(token) {
   const url =
     "wss://generativelanguage.googleapis.com/ws/" +
     "google.ai.generativelanguage.v1beta." +
-    "GenerativeService.BidiGenerateContent?access_token=" +
+    "GenerativeService.BidiGenerateContentConstrained?access_token=" +
     encodeURIComponent(token);
 
   const ws =
