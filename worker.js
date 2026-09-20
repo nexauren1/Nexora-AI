@@ -70,37 +70,109 @@ function deviceHeaders(deviceId) {
   };
 }
 
+
 async function ensureDb(env) {
   if (!env.DB) return;
 
   if (!schemaPromise) {
     schemaPromise = env.DB.batch([
       env.DB.prepare(
-        "CREATE TABLE IF NOT EXISTS devices (" +
-        "id TEXT PRIMARY KEY, plan TEXT NOT NULL DEFAULT 'free'," +
+        "CREATE TABLE IF NOT EXISTS plans (" +
+        "id TEXT PRIMARY KEY, name TEXT NOT NULL," +
+        "price_usd INTEGER NOT NULL DEFAULT 0," +
+        "billing_interval TEXT NOT NULL DEFAULT 'month'," +
+        "monthly_credits INTEGER NOT NULL DEFAULT 0," +
+        "active INTEGER NOT NULL DEFAULT 1," +
         "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
       ),
       env.DB.prepare(
-        "CREATE TABLE IF NOT EXISTS usage (" +
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT NOT NULL," +
-        "month TEXT NOT NULL, feature TEXT NOT NULL, cost INTEGER NOT NULL," +
-        "created_at TEXT NOT NULL)"
-      ),
-      env.DB.prepare(
-        "CREATE TABLE IF NOT EXISTS conversations (" +
-        "id TEXT PRIMARY KEY, device_id TEXT NOT NULL, title TEXT NOT NULL," +
+        "CREATE TABLE IF NOT EXISTS anonymous_state (" +
+        "device_id TEXT PRIMARY KEY," +
+        "plan_id TEXT NOT NULL DEFAULT 'free'," +
+        "monthly_credits_balance INTEGER NOT NULL DEFAULT 100," +
+        "used_this_period INTEGER NOT NULL DEFAULT 0," +
+        "period_start TEXT, period_end TEXT," +
         "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
       ),
       env.DB.prepare(
-        "CREATE TABLE IF NOT EXISTS messages (" +
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT NOT NULL," +
-        "role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL)"
+        "CREATE TABLE IF NOT EXISTS account_state (" +
+        "firebase_uid TEXT PRIMARY KEY," +
+        "plan_id TEXT NOT NULL DEFAULT 'free'," +
+        "subscription_status TEXT NOT NULL DEFAULT 'NONE'," +
+        "monthly_credits_balance INTEGER NOT NULL DEFAULT 100," +
+        "purchased_credits_balance INTEGER NOT NULL DEFAULT 0," +
+        "used_this_period INTEGER NOT NULL DEFAULT 0," +
+        "period_start TEXT, period_end TEXT, grace_until TEXT," +
+        "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+      ),
+      env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS activities (" +
+        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+        "firebase_uid TEXT, device_id TEXT," +
+        "feature TEXT NOT NULL, action TEXT NOT NULL," +
+        "credits_used INTEGER NOT NULL DEFAULT 0," +
+        "status TEXT NOT NULL DEFAULT 'success'," +
+        "request_id TEXT, metadata TEXT, created_at TEXT NOT NULL)"
+      ),
+      env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS credit_ledger (" +
+        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+        "firebase_uid TEXT, device_id TEXT," +
+        "bucket TEXT NOT NULL, entry_type TEXT NOT NULL," +
+        "amount INTEGER NOT NULL, source TEXT NOT NULL," +
+        "reference_id TEXT, expires_at TEXT, created_at TEXT NOT NULL)"
       ),
       env.DB.prepare(
         "CREATE TABLE IF NOT EXISTS subscriptions (" +
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT NOT NULL," +
-        "provider TEXT NOT NULL, provider_id TEXT, plan TEXT NOT NULL," +
-        "status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+        "firebase_uid TEXT, device_id TEXT," +
+        "provider TEXT NOT NULL," +
+        "provider_subscription_id TEXT," +
+        "plan_id TEXT NOT NULL, status TEXT NOT NULL," +
+        "current_period_start TEXT, current_period_end TEXT," +
+        "next_billing_at TEXT," +
+        "cancel_at_period_end INTEGER NOT NULL DEFAULT 0," +
+        "canceled_at TEXT, created_at TEXT NOT NULL," +
+        "updated_at TEXT NOT NULL)"
+      ),
+      env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS payments (" +
+        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+        "firebase_uid TEXT, device_id TEXT," +
+        "provider TEXT NOT NULL," +
+        "provider_payment_id TEXT, provider_order_id TEXT," +
+        "capture_id TEXT, subscription_id INTEGER," +
+        "amount_usd INTEGER NOT NULL DEFAULT 0," +
+        "currency TEXT NOT NULL DEFAULT 'USD'," +
+        "status TEXT NOT NULL, paid_at TEXT," +
+        "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+      ),
+      env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS webhook_events (" +
+        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+        "provider TEXT NOT NULL, event_id TEXT NOT NULL," +
+        "event_type TEXT NOT NULL," +
+        "status TEXT NOT NULL DEFAULT 'received'," +
+        "processed_at TEXT, created_at TEXT NOT NULL," +
+        "UNIQUE(provider, event_id))"
+      ),
+      env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS credit_products (" +
+        "id TEXT PRIMARY KEY, name TEXT NOT NULL," +
+        "credits INTEGER NOT NULL, price_usd INTEGER NOT NULL," +
+        "active INTEGER NOT NULL DEFAULT 1," +
+        "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+      ),
+      env.DB.prepare(
+        "INSERT INTO plans " +
+        "(id, name, price_usd, billing_interval, monthly_credits, active, created_at, updated_at) " +
+        "VALUES " +
+        "('free','Free',0,'month',100,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)," +
+        "('pro','Pro',5,'month',1000,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) " +
+        "ON CONFLICT(id) DO UPDATE SET " +
+        "name=excluded.name, price_usd=excluded.price_usd, " +
+        "monthly_credits=excluded.monthly_credits, active=excluded.active, " +
+        "updated_at=excluded.updated_at"
       )
     ]).catch(function(error) {
       schemaPromise = null;
@@ -111,19 +183,37 @@ async function ensureDb(env) {
   return schemaPromise;
 }
 
+function getFirebaseUid(request) {
+  const value =
+    request.headers.get("x-firebase-uid") || "";
+
+  return /^[A-Za-z0-9:_-]{1,255}$/.test(value)
+    ? value
+    : "";
+}
+
 async function getPlan(env, deviceId) {
   if (!env.DB) return PLANS.free;
 
   await ensureDb(env);
+
   const row = await env.DB
-    .prepare("SELECT plan FROM devices WHERE id = ?")
+    .prepare(
+      "SELECT plan_id AS plan FROM anonymous_state " +
+      "WHERE device_id = ?"
+    )
     .bind(deviceId)
     .first();
 
   return PLANS[row && row.plan] || PLANS.free;
 }
 
-async function consumeCredits(env, deviceId, feature, cost) {
+async function consumeCredits(
+  env,
+  deviceId,
+  feature,
+  cost
+) {
   if (!env.DB) {
     return {
       allowed: true,
@@ -136,58 +226,131 @@ async function consumeCredits(env, deviceId, feature, cost) {
   await ensureDb(env);
 
   const now = new Date();
-  const month = now.toISOString().slice(0, 7);
-  const plan = await getPlan(env, deviceId);
+  const nowIso = now.toISOString();
+  const monthStart =
+    nowIso.slice(0, 7) + "-01T00:00:00.000Z";
+
+  const nextMonth = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth() + 1,
+      1
+    )
+  ).toISOString();
+
+  let plan = await getPlan(
+    env,
+    deviceId
+  );
 
   await env.DB.prepare(
-    "INSERT INTO devices (id, plan, created_at, updated_at) " +
-    "VALUES (?, 'free', ?, ?) " +
-    "ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at"
+    "INSERT INTO anonymous_state " +
+    "(device_id, plan_id, monthly_credits_balance, " +
+    "used_this_period, period_start, period_end, " +
+    "created_at, updated_at) " +
+    "VALUES (?, 'free', 100, 0, ?, ?, ?, ?) " +
+    "ON CONFLICT(device_id) DO NOTHING"
   ).bind(
     deviceId,
-    now.toISOString(),
-    now.toISOString()
+    monthStart,
+    nextMonth,
+    nowIso,
+    nowIso
   ).run();
 
-  const usedRow = await env.DB
+  const state = await env.DB
     .prepare(
-      "SELECT COALESCE(SUM(cost), 0) AS used " +
-      "FROM usage WHERE device_id = ? AND month = ?"
+      "SELECT plan_id, monthly_credits_balance, " +
+      "used_this_period, period_end " +
+      "FROM anonymous_state WHERE device_id = ?"
     )
-    .bind(deviceId, month)
+    .bind(deviceId)
     .first();
 
-  const used = Number((usedRow && usedRow.used) || 0);
+  plan =
+    PLANS[state && state.plan_id] ||
+    PLANS.free;
 
-  if (used + cost > plan.monthlyCredits) {
+  let monthlyBalance =
+    Number(
+      (state && state.monthly_credits_balance) || 0
+    );
+
+  const periodEnd =
+    state && state.period_end
+      ? new Date(state.period_end)
+      : null;
+
+  if (!periodEnd || periodEnd <= now) {
+    monthlyBalance =
+      plan.monthlyCredits;
+
+    await env.DB.prepare(
+      "UPDATE anonymous_state SET " +
+      "monthly_credits_balance = ?, " +
+      "used_this_period = 0, period_start = ?, " +
+      "period_end = ?, updated_at = ? " +
+      "WHERE device_id = ?"
+    ).bind(
+      monthlyBalance,
+      monthStart,
+      nextMonth,
+      nowIso,
+      deviceId
+    ).run();
+  }
+
+  if (monthlyBalance < cost) {
     return {
       allowed: false,
       plan: plan,
-      used: used,
-      remaining: Math.max(0, plan.monthlyCredits - used)
+      used: plan.monthlyCredits - monthlyBalance,
+      remaining: Math.max(0, monthlyBalance)
     };
   }
 
-  await env.DB.prepare(
-    "INSERT INTO usage " +
-    "(device_id, month, feature, cost, created_at) " +
-    "VALUES (?, ?, ?, ?, ?)"
-  ).bind(
-    deviceId,
-    month,
-    feature,
-    cost,
-    now.toISOString()
-  ).run();
+  const remaining =
+    monthlyBalance - cost;
+
+  await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE anonymous_state SET " +
+      "monthly_credits_balance = ?, " +
+      "used_this_period = used_this_period + ?, " +
+      "updated_at = ? WHERE device_id = ?"
+    ).bind(
+      remaining,
+      cost,
+      nowIso,
+      deviceId
+    ),
+    env.DB.prepare(
+      "INSERT INTO activities " +
+      "(device_id, feature, action, credits_used, " +
+      "status, created_at) VALUES (?, ?, 'use', ?, 'success', ?)"
+    ).bind(
+      deviceId,
+      feature,
+      cost,
+      nowIso
+    ),
+    env.DB.prepare(
+      "INSERT INTO credit_ledger " +
+      "(device_id, bucket, entry_type, amount, source, created_at) " +
+      "VALUES (?, 'monthly', 'usage', ?, ?, ?)"
+    ).bind(
+      deviceId,
+      -cost,
+      feature,
+      nowIso
+    )
+  ]);
 
   return {
     allowed: true,
     plan: plan,
-    used: used + cost,
-    remaining: Math.max(
-      0,
-      plan.monthlyCredits - used - cost
-    )
+    used: plan.monthlyCredits - remaining,
+    remaining: remaining
   };
 }
 
@@ -199,36 +362,29 @@ async function saveConversation(
   role,
   content
 ) {
-  if (!env.DB || !conversationId) return;
+  if (!env.DB) return;
 
   await ensureDb(env);
-  const now = new Date().toISOString();
 
   await env.DB.prepare(
-    "INSERT INTO conversations " +
-    "(id, device_id, title, created_at, updated_at) " +
-    "VALUES (?, ?, ?, ?, ?) " +
-    "ON CONFLICT(id) DO UPDATE SET " +
-    "title = excluded.title, updated_at = excluded.updated_at"
+    "INSERT INTO activities " +
+    "(device_id, feature, action, credits_used, " +
+    "status, metadata, created_at) " +
+    "VALUES (?, 'chat', ?, 0, 'success', ?, ?)"
   ).bind(
-    conversationId,
     deviceId,
-    title || "Nova conversa",
-    now,
-    now
-  ).run();
-
-  await env.DB.prepare(
-    "INSERT INTO messages " +
-    "(conversation_id, role, content, created_at) " +
-    "VALUES (?, ?, ?, ?)"
-  ).bind(
-    conversationId,
-    role,
-    content || "",
-    now
+    role === "assistant"
+      ? "assistant_response"
+      : "user_message",
+    JSON.stringify({
+      conversationId: conversationId || null,
+      title: title || "Nova conversa",
+      hasContent: Boolean(content)
+    }),
+    new Date().toISOString()
   ).run();
 }
+
 
 async function geminiFetch(env, path, body) {
   if (!env.GEMINI_API_KEY) {
@@ -401,6 +557,7 @@ function buildSystem(mode) {
 
 async function handleChat(request, env, ctx) {
   const deviceId = getDeviceId(request);
+  const firebaseUid = getFirebaseUid(request);
   const contentType =
     request.headers.get("content-type") || "";
 
@@ -634,6 +791,7 @@ async function handleChat(request, env, ctx) {
 
 async function handleImage(request, env) {
   const deviceId = getDeviceId(request);
+  const firebaseUid = getFirebaseUid(request);
   const contentType =
     request.headers.get("content-type") || "";
 
@@ -793,6 +951,7 @@ async function handleImage(request, env) {
 
 async function handleTts(request, env) {
   const deviceId = getDeviceId(request);
+  const firebaseUid = getFirebaseUid(request);
   const body = await request.json();
   const text = String(
     body.text || ""
@@ -910,6 +1069,7 @@ async function handleTts(request, env) {
 
 async function handleLiveToken(request, env) {
   const deviceId = getDeviceId(request);
+  const firebaseUid = getFirebaseUid(request);
   const credit = await consumeCredits(
     env,
     deviceId,
@@ -1208,9 +1368,9 @@ async function handlePayPalCreateSubscription(
         "VALUES (?, 'paypal', ?, 'pro', ?, ?, ?)"
       ).bind(
         deviceId,
+        firebaseUid || null,
         data.id || null,
-        data.status ||
-          "APPROVAL_PENDING",
+        data.status || "APPROVAL_PENDING",
         new Date().toISOString(),
         new Date().toISOString()
       ).run();
@@ -1336,14 +1496,15 @@ async function handlePayPalStatus(
       ).bind(
         deviceId,
         plan,
+        plan === "pro" ? 1000 : 100,
         new Date().toISOString(),
         new Date().toISOString()
       ).run();
 
       await env.DB.prepare(
         "UPDATE subscriptions " +
-        "SET plan = ?, status = ?, updated_at = ? " +
-        "WHERE provider_id = ? AND device_id = ?"
+        "SET plan_id = ?, status = ?, updated_at = ? " +
+        "WHERE provider_subscription_id = ? AND device_id = ?"
       ).bind(
         plan,
         status,
@@ -1379,36 +1540,12 @@ async function handleHistory(
   request,
   env
 ) {
-  const deviceId =
-    getDeviceId(request);
-
-  if (!env.DB) {
-    return json(
-      {
-        conversations: []
-      },
-      200,
-      deviceHeaders(deviceId)
-    );
-  }
-
-  await ensureDb(env);
-
-  const rows =
-    await env.DB.prepare(
-      "SELECT id, title, created_at, updated_at " +
-      "FROM conversations " +
-      "WHERE device_id = ? " +
-      "ORDER BY updated_at DESC " +
-      "LIMIT 50"
-    ).bind(
-      deviceId
-    ).all();
+  const deviceId = getDeviceId(request);
 
   return json(
     {
-      conversations:
-        rows.results || []
+      conversations: [],
+      source: "local"
     },
     200,
     deviceHeaders(deviceId)
@@ -1419,62 +1556,12 @@ async function handleHistoryMessages(
   request,
   env
 ) {
-  const deviceId =
-    getDeviceId(request);
-
-  const url =
-    new URL(request.url);
-
-  const conversationId =
-    url.searchParams.get(
-      "conversationId"
-    ) || "";
-
-  if (!env.DB || !conversationId) {
-    return json(
-      {
-        messages: []
-      },
-      200,
-      deviceHeaders(deviceId)
-    );
-  }
-
-  await ensureDb(env);
-
-  const owner =
-    await env.DB.prepare(
-      "SELECT id FROM conversations " +
-      "WHERE id = ? AND device_id = ?"
-    ).bind(
-      conversationId,
-      deviceId
-    ).first();
-
-  if (!owner) {
-    return json(
-      {
-        messages: []
-      },
-      404,
-      deviceHeaders(deviceId)
-    );
-  }
-
-  const rows =
-    await env.DB.prepare(
-      "SELECT role, content, created_at " +
-      "FROM messages " +
-      "WHERE conversation_id = ? " +
-      "ORDER BY id ASC"
-    ).bind(
-      conversationId
-    ).all();
+  const deviceId = getDeviceId(request);
 
   return json(
     {
-      messages:
-        rows.results || []
+      messages: [],
+      source: "local"
     },
     200,
     deviceHeaders(deviceId)
