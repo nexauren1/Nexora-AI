@@ -57,3 +57,5 @@ jobs:
 # rebuild after Gradle fix
 
 # rebuild without AndroidX dependency conflicts
+
+# final APK rebuild
