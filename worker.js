@@ -965,6 +965,21 @@ async function handleChat(
       : COSTS[mode] ||
         COSTS.chat;
 
+  if (!env.GEMINI_API_KEY) {
+    return json(
+      {
+        error:
+          "GEMINI_API_KEY não está configurada no Cloudflare.",
+        code:
+          "GEMINI_NOT_CONFIGURED"
+      },
+      503,
+      deviceHeaders(
+        deviceId
+      )
+    );
+  }
+
   const credit =
     await consumeCredits(
       env,
@@ -1241,6 +1256,21 @@ async function handleImage(
     );
   }
 
+  if (!env.GEMINI_API_KEY) {
+    return json(
+      {
+        error:
+          "GEMINI_API_KEY não está configurada no Cloudflare.",
+        code:
+          "GEMINI_NOT_CONFIGURED"
+      },
+      503,
+      deviceHeaders(
+        deviceId
+      )
+    );
+  }
+
   const credit =
     await consumeCredits(
       env,
@@ -1459,6 +1489,21 @@ async function handleTts(
     );
   }
 
+  if (!env.GEMINI_API_KEY) {
+    return json(
+      {
+        error:
+          "GEMINI_API_KEY não está configurada no Cloudflare.",
+        code:
+          "GEMINI_NOT_CONFIGURED"
+      },
+      503,
+      deviceHeaders(
+        deviceId
+      )
+    );
+  }
+
   const credit =
     await consumeCredits(
       env,
@@ -1574,6 +1619,21 @@ async function handleLiveToken(
 ) {
   const deviceId =
     getDeviceId(request);
+
+  if (!env.GEMINI_API_KEY) {
+    return json(
+      {
+        error:
+          "GEMINI_API_KEY não está configurada no Cloudflare.",
+        code:
+          "GEMINI_NOT_CONFIGURED"
+      },
+      503,
+      deviceHeaders(
+        deviceId
+      )
+    );
+  }
 
   const credit =
     await consumeCredits(
