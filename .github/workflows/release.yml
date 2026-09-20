@@ -12,10 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      - name: Create app archive
+        run: |
+          mkdir -p dist
+          git archive --format=zip \
+            --output="dist/nexora-ai-sandbox-${GITHUB_SHA}.zip" \
+            HEAD
+      - name: Upload GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexora-ai-sandbox-${{ github.sha }}
+          path: dist/nexora-ai-sandbox-${{ github.sha }}.zip
+          if-no-files-found: error
+          retention-days: 30
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="v0.1.${GITHUB_RUN_NUMBER}"
-          gh release create "${VERSION}"             --title "Nexora AI ${VERSION} — Sandbox"             --notes "Sandbox build generated from commit ${GITHUB_SHA}."
+          gh release create "${VERSION}" \
+            "dist/nexora-ai-sandbox-${GITHUB_SHA}.zip" \
+            --title "Nexora AI ${VERSION} — Sandbox" \
+            --notes "Sandbox app archive generated from commit ${GITHUB_SHA}."
