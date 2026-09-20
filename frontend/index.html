@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f6f8fc">
+  <meta name="description" content="Nexora AI — conversa, trabalha, resume, analisa imagens, áudio, vídeo e documentos, gera imagens e voz.">
+  <title>Nexora AI</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <button class="brand" id="brandHome" aria-label="Nexora AI">
+          <span class="brand-mark">N</span>
+          <span class="brand-name">Nexora AI</span>
+        </button>
+        <button class="icon-btn mobile-only" id="closeSidebar" aria-label="Fechar menu">×</button>
+      </div>
+
+      <button class="new-chat-btn" id="newChatBtn">
+        <span>＋</span>
+        <span>Nova conversa</span>
+      </button>
+
+      <button class="sidebar-search" id="historySearchBtn">
+        <span>⌕</span>
+        <span>Pesquisar no histórico</span>
+        <span class="key-hint">Ctrl K</span>
+      </button>
+
+      <div class="nav-section">
+        <div class="section-label">Ferramentas</div>
+        <button class="nav-item active" data-mode="chat"><span class="nav-icon">◉</span><span>Chat</span></button>
+        <button class="nav-item" data-mode="work"><span class="nav-icon">✎</span><span>Trabalhos / escrita</span></button>
+        <button class="nav-item" data-mode="summary"><span class="nav-icon">▤</span><span>Resumos</span></button>
+        <button class="nav-item" data-mode="pdf"><span class="nav-icon">▥</span><span>PDF</span></button>
+        <button class="nav-item" data-mode="documents"><span class="nav-icon">□</span><span>Documentos</span></button>
+        <button class="nav-item" data-mode="image"><span class="nav-icon">▧</span><span>Analisar imagens</span></button>
+        <button class="nav-item" data-mode="audio"><span class="nav-icon">◔</span><span>Analisar áudio</span></button>
+        <button class="nav-item" data-mode="video"><span class="nav-icon">▷</span><span>Analisar vídeo</span></button>
+        <button class="nav-item" data-mode="code"><span class="nav-icon">&lt;/&gt;</span><span>Código</span></button>
+        <button class="nav-item" data-action="generate-image"><span class="nav-icon">✦</span><span>Gerar imagem</span></button>
+        <button class="nav-item" data-action="voice-live"><span class="nav-icon">◉</span><span>Voz em tempo real</span></button>
+      </div>
+
+      <div class="history-head">
+        <span>Histórico</span>
+        <button class="tiny-btn" id="clearHistoryBtn" title="Limpar histórico local">Limpar</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+
+      <div class="sidebar-bottom">
+        <div class="usage-card">
+          <div class="usage-top">
+            <span id="planLabel">Free</span>
+            <strong id="creditsLabel">100 créditos</strong>
+          </div>
+          <div class="usage-track"><div class="usage-fill" id="usageFill"></div></div>
+          <button class="upgrade-btn" id="upgradeBtn">Passar para Pro · $5/mês</button>
+        </div>
+        <div class="footer-links">
+          <button data-action="about">Sobre</button>
+          <button data-action="privacy">Privacidade</button>
+          <button data-action="terms">Termos</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn mobile-only" id="openSidebar" aria-label="Abrir menu">☰</button>
+        <div class="model-area">
+          <span class="status-dot"></span>
+          <span id="topTitle">Nexora AI</span>
+          <button class="model-pill" id="modePill">Chat ▾</button>
+        </div>
+        <div class="top-actions">
+          <button class="top-btn" id="upgradeTopBtn">Pro</button>
+          <button class="top-btn" id="shareBtn">Compartilhar</button>
+        </div>
+      </header>
+
+      <section class="chat-page" id="chatPage">
+        <div class="chat-scroll" id="chatScroll">
+          <div class="welcome" id="welcome">
+            <div class="welcome-mark">N</div>
+            <h1>Como posso ajudar?</h1>
+            <p>Conversa, trabalhos, resumos, código, ficheiros, imagens, áudio, vídeo e voz.</p>
+            <div class="quick-grid">
+              <button class="quick-card" data-preset="Explica este tema de forma simples: "><span>✦</span><strong>Explicar</strong><small>Aprender qualquer tema</small></button>
+              <button class="quick-card" data-preset="Ajuda-me a fazer este trabalho: "><span>✎</span><strong>Trabalho</strong><small>Estruturar e escrever</small></button>
+              <button class="quick-card" data-preset="Resume este conteúdo e destaca o essencial: "><span>▤</span><strong>Resumo</strong><small>Ideias e pontos-chave</small></button>
+              <button class="quick-card" data-preset="Analisa este ficheiro e diz-me o mais importante."><span>□</span><strong>Analisar ficheiro</strong><small>PDF, documento, áudio ou vídeo</small></button>
+            </div>
+          </div>
+          <div class="messages" id="messages"></div>
+        </div>
+
+        <div class="composer-wrap">
+          <div class="attachment-preview" id="attachmentPreview"></div>
+          <form class="composer" id="composer">
+            <div class="composer-tools">
+              <button type="button" class="circle-btn" id="attachBtn" title="Adicionar ficheiro">＋</button>
+              <button type="button" class="circle-btn" id="cameraBtn" title="Câmara">⌾</button>
+            </div>
+            <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Mensagem para Nexora AI"></textarea>
+            <div class="composer-actions">
+              <button type="button" class="circle-btn" id="micBtn" title="Ditado por voz">◉</button>
+              <button type="button" class="send-btn" id="sendBtn" aria-label="Enviar">↑</button>
+            </div>
+            <input class="hidden-file" id="fileInput" type="file" accept="image/*,.pdf,.txt,.md,.doc,.docx,.csv,.json,.js,.ts,.py,.html,.css,.java,.cpp,.c,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov">
+            <input class="hidden-file" id="cameraInput" type="file" accept="image/*" capture="environment">
+          </form>
+          <div class="composer-note">Nexora pode cometer erros. Verifica informações importantes.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="modal">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card" id="modalCard"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
