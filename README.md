@@ -1,54 +1,65 @@
+
 # Nexora AI
 
-Nexora AI is a lightweight multimodal AI workspace powered by Cloudflare Workers and Google Gemini.
+Nexora AI is a lightweight multimodal AI workspace powered by
+Cloudflare Workers and Google Gemini.
 
-## Included
+## Current phase
 
+This repository is intentionally focused on a stable anonymous MVP.
+
+Included:
 - Chat
-- Trabalhos e escrita
-- Resumos
-- PDF e documentos
-- Análise de imagens, áudio e vídeo
-- Código e perguntas/respostas
-- Geração de imagens com Nano Banana
-- Geração de voz com Gemini TTS
-- Voz em tempo real com Gemini Live
-- Histórico local e histórico D1 quando a binding DB estiver disponível
-- Free: 100 créditos/mês
-- Pro: 1000 créditos/mês, US$5/mês
-- PayPal Sandbox subscription flow
+- Writing and school/work assistance
+- Summaries
+- PDF analysis
+- Text-file analysis
+- Image, audio and video analysis
+- Code assistance
+- Image generation
+- Gemini TTS
+- Gemini Live voice
+- Local history
+- D1 history and monthly quota when the DB binding exists
+- Free quota: 100 credits/month
 
-## Cloudflare secrets/variables
+Not included yet:
+- Firebase Authentication
+- Google Sign-In
+- Paid subscriptions
+- PayPal
+- Purchased credit packs
 
-Keep these out of GitHub:
+Those are planned for the next phase after the core app is stable.
+
+## Cloudflare variables
+
+Keep this secret out of GitHub:
 
 - GEMINI_API_KEY
-- PAYPAL_CLIENT_ID
-- PAYPAL_CLIENT_SECRET
-- PAYPAL_PRO_PLAN_ID
-- PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
 
-The Worker uses env.GEMINI_API_KEY, so the Gemini key is never bundled into the frontend.
+The frontend never contains the Gemini API key.
 
 ## D1
 
-The app expects a D1 binding named DB. The Worker also creates its tables lazily on first use, and schema.sql is included for manual migrations.
+The Worker expects a D1 binding named DB.
+The Wrangler file intentionally does not hard-code the database UUID.
 
-## Deploy
+If the existing Cloudflare project already has a DB binding,
+keep that binding when deploying. The Worker initializes the MVP
+tables automatically on first database request.
 
-Cloudflare Workers + Static Assets can deploy both the Worker and the frontend from this repository.
+schema.sql contains the same schema for manual migrations.
 
-The Wrangler file intentionally does not hard-code the D1 database UUID because the existing Cloudflare project already owns that binding. If the dashboard binding is not preserved by the deployment setup, add the existing database UUID to wrangler.json.
-
-## Current API
+## API
 
 - GET /api/health
 - GET /api/plans
+- GET /api/usage
 - POST /api/chat
 - POST /api/image
 - POST /api/tts
 - POST /api/live-token
-- POST /api/paypal/create-subscription
-- POST /api/paypal/status
 - GET /api/history
-- GET /api/history/messages
+- GET /api/history/messages?conversationId=...
+- DELETE /api/history

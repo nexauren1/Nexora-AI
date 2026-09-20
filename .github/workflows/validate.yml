@@ -1,3 +1,4 @@
+
 name: Validate Nexora AI
 
 on:
@@ -12,8 +13,17 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Wrangler
+        run: npm install --no-save wrangler@4.35.0
 
       - name: Check JavaScript syntax
         run: |
@@ -21,4 +31,4 @@ jobs:
           node --check frontend/app.js
 
       - name: Validate Wrangler configuration
-        run: npx wrangler@latest deploy --dry-run
+        run: npx wrangler deploy --dry-run

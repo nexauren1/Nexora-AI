@@ -1,3 +1,4 @@
+
 name: Android APK
 
 on:
@@ -15,6 +16,7 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -37,6 +39,9 @@ jobs:
         working-directory: android
         run: gradle --no-daemon assembleDebug
 
+      - name: Verify APK exists
+        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -47,15 +52,10 @@ jobs:
 
       - name: Create APK release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="android-v0.1.${GITHUB_RUN_NUMBER}"
-          gh release create "${VERSION}"             "android/app/build/outputs/apk/debug/app-debug.apk"             --title "Nexora AI ${VERSION} — Android APK"             --notes "Installable Android APK built from commit ${GITHUB_SHA}."
-
-# APK build pipeline active
-
-# rebuild after Gradle fix
-
-# rebuild without AndroidX dependency conflicts
-
-# final APK rebuild
+          VERSION="android-v0.2.\${GITHUB_RUN_NUMBER}"
+          gh release create "\${VERSION}" \
+            "android/app/build/outputs/apk/debug/app-debug.apk" \
+            --title "Nexora AI \${VERSION} — Android APK" \
+            --notes "Debug APK built from commit \${GITHUB_SHA}."

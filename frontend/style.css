@@ -1,3 +1,4 @@
+
 :root{
   --bg:#f7f9fc;
   --panel:#ffffff;
@@ -17,6 +18,7 @@ html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--text);overflow:hidden}
 button,textarea{font:inherit}
 button{border:0;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
 .app-shell{display:flex;height:100dvh}
 .sidebar{width:var(--sidebar);background:#fbfcfe;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 12px;gap:10px;flex-shrink:0}
 .brand-row{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 8px}
@@ -47,7 +49,6 @@ button{border:0;cursor:pointer}
 .usage-top strong{color:#6f7a8e}
 .usage-track{height:7px;background:#edf0f4;border-radius:999px;overflow:hidden;margin:10px 0}
 .usage-fill{height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));border-radius:999px;transition:width .3s}
-.upgrade-btn{width:100%;height:36px;background:var(--text);color:#fff;border-radius:9px;font-weight:750;font-size:12px}
 .footer-links{display:flex;gap:8px;padding:8px 5px 0}
 .footer-links button{font-size:11px;background:none;color:#8b94a4}
 .main{min-width:0;flex:1;display:flex;flex-direction:column}
@@ -57,7 +58,6 @@ button{border:0;cursor:pointer}
 .model-pill,.top-btn{background:#f2f5f9;color:#566276;border:1px solid #e4e8ee;border-radius:9px;padding:6px 10px;font-size:12px;font-weight:700}
 .top-actions{display:flex;gap:7px}
 .top-btn{background:#fff}
-.top-btn:first-child{color:var(--brand);border-color:#cdd6f6;background:var(--brand-soft)}
 .icon-btn{width:34px;height:34px;border-radius:9px;background:transparent;color:#5b6678;font-size:20px}
 .mobile-only{display:none}
 .chat-page{min-height:0;flex:1;display:flex;flex-direction:column}
@@ -87,7 +87,7 @@ button{border:0;cursor:pointer}
 .message-tools{display:flex;gap:5px;margin-top:8px}
 .mini-action{height:27px;padding:0 8px;border-radius:7px;background:#f5f7fa;color:#6a7588;font-size:11px;border:1px solid #e8ebf0}
 .generated-image{display:block;max-width:min(620px,100%);border-radius:15px;margin-top:10px;border:1px solid var(--line);box-shadow:var(--shadow)}
-.file-chip{display:flex;align-items:center;gap:7px;padding:8px 10px;background:#f3f6fa;border:1px solid var(--line);border-radius:10px;font-size:12px;color:#607087;width:max-content;max-width:100%}
+.file-chip{display:flex;align-items:center;gap:7px;padding:8px 10px;background:#f3f6fa;border:1px solid var(--line);border-radius:10px;font-size:12px;color:#607087;width:max-content;max-width:100%;margin-bottom:8px}
 .composer-wrap{padding:10px 22px 18px;background:linear-gradient(180deg,rgba(247,249,252,.3),var(--bg) 35%)}
 .composer{max-width:900px;margin:0 auto;display:flex;align-items:flex-end;gap:9px;background:#fff;border:1px solid #d7dee9;border-radius:17px;padding:8px 10px;box-shadow:0 10px 32px rgba(35,51,81,.08)}
 .composer:focus-within{border-color:#bdc9e3;box-shadow:0 12px 36px rgba(35,51,81,.10)}
@@ -109,11 +109,7 @@ textarea::placeholder{color:#8b96a7}
 .modal-card h2{margin:0 0 7px;font-size:20px}.modal-card p{color:var(--muted);line-height:1.55}
 .modal-close{float:right;border:0;background:#f0f3f7;width:31px;height:31px;border-radius:8px;color:#687388}
 .plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
-.plan-card{border:1px solid var(--line);border-radius:13px;padding:15px}
-.plan-card.pro{border-color:#cbd5f8;background:#f8f9ff}
-.plan-card strong{font-size:16px}.plan-price{font-size:25px;font-weight:850;margin:10px 0 4px}.plan-card ul{padding-left:17px;color:#647087;font-size:12px;line-height:1.8}
 .primary-btn{width:100%;height:40px;border-radius:10px;background:var(--brand);color:#fff;font-weight:800}
-.secondary-btn{width:100%;height:40px;border-radius:10px;background:#f1f4f8;color:#4c5870;font-weight:700;margin-top:8px}
 .voice-orb{width:110px;height:110px;border-radius:50%;display:grid;place-items:center;margin:12px auto;background:radial-gradient(circle at 35% 30%,#91a2ff,var(--brand));color:#fff;font-size:34px;box-shadow:0 18px 50px rgba(49,91,219,.26);animation:pulse 2s ease-in-out infinite}
 .live-state{text-align:center;padding:6px 0 12px;color:#637086;font-size:12px}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
