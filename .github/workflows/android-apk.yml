@@ -46,15 +46,44 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
+        id: publish
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="android-v0.3.\${GITHUB_RUN_NUMBER}"
-          cp \
-            android/app/build/outputs/apk/release/app-release.apk \
-            "Nexora-AI-\${VERSION}.apk"
+          VERSION="android-v0.4.${GITHUB_RUN_NUMBER}"
+          cp             android/app/build/outputs/apk/release/app-release.apk             "Nexora-AI-${VERSION}.apk"
 
-          gh release create "\${VERSION}" \
-            "Nexora-AI-\${VERSION}.apk" \
-            --title "Nexora AI \${VERSION} — Native Android" \
-            --notes "Real native Android application. No WebView. Built from commit \${GITHUB_SHA}."
+          gh release create "${VERSION}"             "Nexora-AI-${VERSION}.apk"             --title "Nexora AI ${VERSION} — Native Android"             --notes "Real native Android application. No WebView. Native UI with Home, History, Settings and tool modes. Built from commit ${GITHUB_SHA}."
+
+      - name: Record successful release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="android-v0.4.${GITHUB_RUN_NUMBER}"
+          STATUS_PATH="android-release-status.json"
+          CONTENT=$(printf '{"status":"success","version":"%s","run_id":"%s","commit":"%s","apk":"Nexora-AI-%s.apk"}'             "${VERSION}" "${GITHUB_RUN_ID}" "${GITHUB_SHA}" "${VERSION}" | base64 -w 0)
+
+          SHA=$(gh api             "repos/${GITHUB_REPOSITORY}/contents/${STATUS_PATH}"             --jq .sha 2>/dev/null || true)
+
+          if [ -n "${SHA}" ]; then
+            gh api               "repos/${GITHUB_REPOSITORY}/contents/${STATUS_PATH}"               -X PUT               -f message="ci: record successful Android release"               -f content="${CONTENT}"               -f sha="${SHA}"
+          else
+            gh api               "repos/${GITHUB_REPOSITORY}/contents/${STATUS_PATH}"               -X PUT               -f message="ci: record successful Android release"               -f content="${CONTENT}"
+          fi
+
+      - name: Record failed build
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STATUS_PATH="android-release-status.json"
+          CONTENT=$(printf '{"status":"failed","run_id":"%s","commit":"%s"}'             "${GITHUB_RUN_ID}" "${GITHUB_SHA}" | base64 -w 0)
+
+          SHA=$(gh api             "repos/${GITHUB_REPOSITORY}/contents/${STATUS_PATH}"             --jq .sha 2>/dev/null || true)
+
+          if [ -n "${SHA}" ]; then
+            gh api               "repos/${GITHUB_REPOSITORY}/contents/${STATUS_PATH}"               -X PUT               -f message="ci: record failed Android build"               -f content="${CONTENT}"               -f sha="${SHA}"
+          else
+            gh api               "repos/${GITHUB_REPOSITORY}/contents/${STATUS_PATH}"               -X PUT               -f message="ci: record failed Android build"               -f content="${CONTENT}"
+          fi
